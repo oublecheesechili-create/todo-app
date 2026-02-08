@@ -1,0 +1,115 @@
+========================================
+  GitHub で「やること」アプリを公開する手順
+========================================
+
+■ 事前準備
+・GitHub のアカウントを作る（まだなら https://github.com で「Sign up」）
+・パソコンに Git を入れる（まだなら https://git-scm.com からダウンロード）
+
+■ 手順（全部で4ステップ）
+
+--- ステップ1：GitHub で新しいリポジトリを作る ---
+  1. https://github.com にログイン
+  2. 右上の「+」→「New repository」
+  3. Repository name に「todo-app」と入力（別の名前でもOK。URLが変わるだけ）
+  4. Public を選ぶ
+  5. 「Add a README file」にはチェックを入れない（中身はこっちにあるので）
+  6. 「Create repository」をクリック
+
+--- ステップ2：このフォルダを Git の管理下に置く ---
+  1. パソコンで「todo-app」フォルダを開く
+  2. フォルダの中（index.html がある場所）で、右クリック
+     →「Git Bash をここで開く」を選ぶ
+     （または「ターミナル」「PowerShell」を開いて、cd でこのフォルダに移動）
+
+  3. 次のコマンドを順に打って Enter：
+
+     git init
+
+     git add .
+
+     git commit -m "やることアプリを追加"
+
+--- ステップ3：GitHub のリポジトリに送る ---
+  （※「push an existing repository」の表示はなくても大丈夫。次の方法でできます）
+
+  ★ 使うのは「Code」ボタンだけ。ステップ2で使ったのと同じターミナル（Git Bash）で
+    作業します。閉じちゃった場合は「todo-app」フォルダで右クリック→「Git Bash をここで開く」で開き直す。
+
+【3-1】リポジトリのURLをコピーする
+  1. ステップ1で「Create repository」を押したあと、そのリポジトリのページにいます。
+     （別のページに行っちゃった場合は、GitHub のトップから自分のリポジトリ一覧に入り、
+      「todo-app」をクリックして開く）
+  2. ページの上の方にある、緑色の「Code」ボタンをクリック
+  3. 下にポップアップ（または枠）が出て、URL が表示されます
+  4. 「HTTPS」が選ばれていることを確認（タブで切り替えられることがあります）
+  5. 表示されている URL の右にある「コピー」アイコン（クリップボードのマーク）を
+     クリックして、URL をコピー
+     例：https://github.com/あなたのユーザー名/todo-app.git
+
+【3-2】ターミナルで3つのコマンドを打つ（1行ずつ Enter）
+  次の3行を、順番に「コピー＆貼り付け」または入力して、1行ずつ Enter を押します。
+  2行目だけ、さっきコピーした URL に置き換えてください。
+
+  (1) 1行目（そのまま使ってOK）
+      git branch -M main
+
+  (2) 2行目（★ここに、さっきコピーした URL を貼り付ける）
+      git remote add origin （ここにURLを貼り付け）
+      例：git remote add origin https://github.com/あなたのユーザー名/todo-app.git
+
+  (3) 3行目（そのまま使ってOK）
+      git push -u origin main
+
+  ※ ログインやパスワードを聞かれたら、GitHub の認証情報を入力します（初回だけのことが多いです）
+
+【エラーが出たとき】
+  ・「error: failed to push some refs to '...'」と出た場合
+     （続きに「Updates were rejected because the remote contains work...」などと出ることが多い）
+    → GitHub 側に、こっちにないファイル（README など）がある状態です。次のどちらかで直せます。
+
+    (A) 安全に合わせる（GitHub の内容を取り込んでから送る）
+        次の2行を順に打つ（エディタは開かないので、そのまま Enter でOK）：
+          git pull origin main --allow-unrelated-histories --no-edit
+          git push -u origin main
+        ※ もし別のウィンドウで「メッセージを入力」みたいな画面が出た場合は、
+          そのウィンドウを「保存して閉じる」か、×で閉じれば続きます。
+          「wq」は PowerShell には打たないでください（vim の中だけで使うコマンドです）。
+
+    (B) ローカルを正として、GitHub を上書きする（今作りたてのリポジトリでOK）
+        pull しても push がまだ失敗するときは、次で強制送信します：
+          git push -u origin main --force
+        ※ 自分だけの新しいリポジトリならこれで問題ありません。
+
+  ・「error: src refspec main does not match any」と出た場合
+    → ほぼ「コミットが1つもない」状態です。ブランチは最初のコミットでできるので、
+      まず次の3行を順に打ってから、もう一度 push してください：
+      git add .
+      git commit -m "やることアプリを追加"
+      git push -u origin main --force
+    もし「Please tell me who you are」と出たら、その下に表示される2行
+    （git config user.email と user.name）を先に打ってから、上をやり直します。
+
+  ・「error: remote origin already exists.」と出た場合
+    → すでに origin が登録されています。次のどちらかでOKです。
+    (A) このまま「送る」だけ実行する（2行目は飛ばして、3行目だけ打つ）：
+        git push -u origin main
+    (B) 登録し直したい場合（URL を間違えたなど）：
+        まず削除：  git remote remove origin
+        もう一度：  git remote add origin （ここにURL）
+        送る：      git push -u origin main
+
+--- ステップ4：GitHub Pages をオンにする ---
+  1. GitHub でそのリポジトリのページを開く
+  2. 上メニューの「Settings」をクリック
+  3. 左の「Pages」をクリック
+  4. 「Build and deployment」の「Source」で「Deploy from a branch」を選ぶ
+  5. 「Branch」で「main」と「/ (root)」を選んで「Save」
+  6. 1〜2分待つと、「Your site is live at https://〇〇〇.github.io/todo-app/」のように表示される
+
+--- ここまでできたら ---
+・表示されたURLをスマホのブラウザで開けば、スマホからも使えます。
+・パソコンでも同じURLで開けます。
+・データは「そのブラウザ」に保存されるので、パソコンとスマホでは別々のリストになります。
+
+========================================

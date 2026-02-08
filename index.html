@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#f2f2f7">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>やること</title>
+  <style>
+    /* ========== ① 見た目の土台（iPhoneっぽく） ========== */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      background: #f2f2f7;
+      min-height: 100vh;
+      padding: 12px;
+      padding-top: max(12px, env(safe-area-inset-top));
+      padding-bottom: max(12px, env(safe-area-inset-bottom));
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    /* タイトルバー（アプリ名） */
+    .header {
+      text-align: center;
+      padding: 16px 0 20px;
+      font-size: 22px;
+      font-weight: 600;
+      color: #1d1d1f;
+    }
+
+    /* 入力エリア：ここにタスクを打ち込む */
+    .add-area {
+      background: #fff;
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .add-area input {
+      width: 100%;
+      border: none;
+      font-size: 17px;
+      outline: none;
+      background: transparent;
+    }
+    .add-area input::placeholder {
+      color: #8e8e93;
+    }
+
+    /* タスク一覧のコンテナ */
+    .list-wrap {
+      background: #fff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+
+    /* 1行1タスク */
+    .task {
+      display: flex;
+      align-items: center;
+      padding: 14px 16px;
+      border-bottom: 1px solid #f2f2f7;
+      gap: 12px;
+      min-height: 52px;
+    }
+    .task:last-child { border-bottom: none; }
+
+    /* 丸チェックボックス（タップしやすいサイズ） */
+    .check {
+      width: 28px;
+      height: 28px;
+      min-width: 28px;
+      min-height: 28px;
+      border: 2px solid #c7c7cc;
+      border-radius: 50%;
+      flex-shrink: 0;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+    .task.done .check {
+      background: #34c759;
+      border-color: #34c759;
+    }
+    .task.done .check::after {
+      content: "✓";
+      color: #fff;
+      font-size: 16px;
+      font-weight: bold;
+    }
+
+    /* タスクの文字 */
+    .task-text {
+      flex: 1;
+      font-size: 17px;
+      color: #1d1d1f;
+    }
+    .task.done .task-text {
+      color: #8e8e93;
+      text-decoration: line-through;
+    }
+
+    /* 削除ボタン（指で押しやすいサイズ） */
+    .delete-btn {
+      width: 44px;
+      height: 44px;
+      min-width: 44px;
+      min-height: 44px;
+      border: none;
+      background: #ff3b30;
+      color: #fff;
+      border-radius: 10px;
+      font-size: 20px;
+      cursor: pointer;
+      flex-shrink: 0;
+      line-height: 1;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.9;
+    }
+    .delete-btn:hover { opacity: 1; }
+
+    /* 空のときのメッセージ */
+    .empty-msg {
+      text-align: center;
+      padding: 32px 16px;
+      color: #8e8e93;
+      font-size: 15px;
+    }
+  </style>
+</head>
+<body>
+  <header class="header">やること</header>
+
+  <!-- ② タスクを「追加」する場所 -->
+  <div class="add-area">
+    <input type="text" id="newTask" placeholder="タスクを入力..." maxlength="200" enterkeyhint="done">
+  </div>
+
+  <!-- ③ タスク一覧を表示する場所 -->
+  <div class="list-wrap">
+    <div id="taskList"></div>
+    <div id="emptyMsg" class="empty-msg">タスクを追加してみましょう</div>
+  </div>
+
+  <script>
+    // ========== ④ データの保存場所（ブラウザを閉じても消えない） ==========
+    const STORAGE_KEY = 'todo-app-tasks';
+
+    function loadTasks() {
+      const json = localStorage.getItem(STORAGE_KEY);
+      if (!json) return [];
+      try {
+        return JSON.parse(json);
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function saveTasks(tasks) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+    }
+
+    // ========== ⑤ 画面にタスクを描き直す ==========
+    let tasks = loadTasks();
+
+    function render() {
+      const list = document.getElementById('taskList');
+      const emptyMsg = document.getElementById('emptyMsg');
+      list.innerHTML = '';
+
+      if (tasks.length === 0) {
+        emptyMsg.style.display = 'block';
+        return;
+      }
+      emptyMsg.style.display = 'none';
+
+      tasks.forEach((task, index) => {
+        const div = document.createElement('div');
+        div.className = 'task' + (task.done ? ' done' : '');
+        div.innerHTML =
+          '<div class="check" data-index="' + index + '" role="button" aria-label="完了"></div>' +
+          '<span class="task-text">' + escapeHtml(task.text) + '</span>' +
+          '<button type="button" class="delete-btn" data-index="' + index + '" aria-label="削除">×</button>';
+        list.appendChild(div);
+      });
+
+      // クリックイベントを付ける
+      list.querySelectorAll('.check').forEach(el => {
+        el.addEventListener('click', () => toggleDone(Number(el.dataset.index)));
+      });
+      list.querySelectorAll('.delete-btn').forEach(el => {
+        el.addEventListener('click', () => deleteTask(Number(el.dataset.index)));
+      });
+    }
+
+    function escapeHtml(s) {
+      const div = document.createElement('div');
+      div.textContent = s;
+      return div.innerHTML;
+    }
+
+    // ========== ⑥ 追加・完了・削除の処理 ==========
+    function addTask() {
+      const input = document.getElementById('newTask');
+      const text = input.value.trim();
+      if (!text) return;
+      tasks.push({ text: text, done: false });
+      saveTasks(tasks);
+      input.value = '';
+      render();
+    }
+
+    function toggleDone(index) {
+      if (index < 0 || index >= tasks.length) return;
+      tasks[index].done = !tasks[index].done;
+      saveTasks(tasks);
+      render();
+    }
+
+    function deleteTask(index) {
+      if (index < 0 || index >= tasks.length) return;
+      tasks.splice(index, 1);
+      saveTasks(tasks);
+      render();
+    }
+
+    // ========== ⑦ 入力欄でEnterを押したら追加 ==========
+    document.getElementById('newTask').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addTask();
+      }
+    });
+
+    // 最初に保存済みタスクを表示
+    render();
+  </script>
+</body>
+</html>
